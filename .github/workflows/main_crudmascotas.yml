@@ -57,4 +57,4 @@ jobs:
           app-name: 'crudmascotas'
           slot-name: 'Production'
           package: .
-          publish-profile: ${{ secrets.AZUREAPPSERVICE_PUBLISHPROFILE_BE073940FE44403A868CF55FC8DD7861 }}
+          publish-profile: ${{ secrets.AZUREAPPSERVICE_PUBLISHPROFILE_AEA65956F91B4702966CFCC60810AF78 }}
