@@ -22,31 +22,13 @@ class Database extends Config
     /**
      * The default database connection.
      *
+     * NOTE: env() cannot be used in property initializers because PHP requires
+     * constant expressions there. We initialize this property in the
+     * constructor instead so env() calls are allowed.
+     *
      * @var array<string, mixed>
      */
-    public array $default = [
-        'DSN'          => '',
-        'hostname'     => 'tcp:crudmascotas4.database.windows.net,1433',
-        'username'     => 'Andysql',
-        'password'     => 'AFKArena100%',
-        'database'     => 'bd_crud',
-        'DBDriver'     => 'SQLSRV',
-        'DBPrefix'     => '',
-        'pConnect'     => false,
-        'DBDebug'      => true,
-        'charset'      => 'utf8',
-        'DBCollat'     => 'utf8_general_ci',
-        'swapPre'      => '',
-        'encrypt'      => true,
-        'trustServerCertificate' => false,
-        'failover'     => [],
-        'port'         => 1433,
-        'dateFormat'   => [
-            'date'     => 'Y-m-d',
-            'datetime' => 'Y-m-d H:i:s',
-            'time'     => 'H:i:s',
-        ],
-    ];
+    public array $default = [];
 
     //    /**
     //     * Sample database connection for SQLite3.
@@ -189,6 +171,58 @@ class Database extends Config
     public function __construct()
     {
         parent::__construct();
+
+        // Small helper to read either DB_* style env vars (preferred for Azure App Settings)
+        // or the older CodeIgniter `database.default.*` keys that you may have in an env file.
+        $get = function ($primary, $secondary = null, $default = null) {
+            // First check CodeIgniter env() which looks in $_SERVER/$_ENV and .env
+            $val = env($primary);
+            if ($val !== null && $val !== '') {
+                return $val;
+            }
+            if ($secondary !== null) {
+                $val = env($secondary);
+                if ($val !== null && $val !== '') {
+                    return $val;
+                }
+            }
+            // Fallback to plain getenv in case the server exposes variables differently
+            $val = getenv($primary);
+            if ($val !== false && $val !== '') {
+                return $val;
+            }
+            if ($secondary !== null) {
+                $val = getenv($secondary);
+                if ($val !== false && $val !== '') {
+                    return $val;
+                }
+            }
+            return $default;
+        };
+
+        $this->default = [
+            'DSN'          => $get('DB_DSN', 'database.default.DSN', ''),
+            'hostname'     => $get('DB_HOST', 'database.default.hostname', 'tcp:crudmascotas4.database.windows.net,1433'),
+            'username'     => $get('DB_USER', 'database.default.username', 'Andysql'),
+            'password'     => $get('DB_PASS', 'database.default.password', 'AFKArena100%'),
+            'database'     => $get('DB_DATABASE', 'database.default.database', 'bd_crud'),
+            'DBDriver'     => $get('DB_DRIVER', 'database.default.DBDriver', 'SQLSRV'),
+            'DBPrefix'     => $get('DB_PREFIX', 'database.default.DBPrefix', ''),
+            'pConnect'     => false,
+            'DBDebug'      => (bool) filter_var($get('DB_DEBUG', 'database.default.DBDebug', true), FILTER_VALIDATE_BOOLEAN),
+            'charset'      => $get('DB_CHARSET', 'database.default.charset', 'utf8'),
+            'DBCollat'     => $get('DB_COLLATE', 'database.default.DBCollat', 'utf8_general_ci'),
+            'swapPre'      => $get('DB_SWAP_PRE', 'database.default.swapPre', ''),
+            'encrypt'      => filter_var($get('DB_ENCRYPT', 'database.default.encrypt', true), FILTER_VALIDATE_BOOLEAN),
+            'trustServerCertificate' => filter_var($get('DB_TRUST_SERVER_CERTIFICATE', 'database.default.trustServerCertificate', false), FILTER_VALIDATE_BOOLEAN),
+            'failover'     => [],
+            'port'         => (int) $get('DB_PORT', 'database.default.port', 1433),
+            'dateFormat'   => [
+                'date'     => 'Y-m-d',
+                'datetime' => 'Y-m-d H:i:s',
+                'time'     => 'H:i:s',
+            ],
+        ];
 
         // Ensure that we always set the database group to 'tests' if
         // we are currently running an automated test suite, so that
